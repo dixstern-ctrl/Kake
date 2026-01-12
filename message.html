@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Messenger</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #auth-container, #chat-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px; }
+        .hidden { display: none; }
+        
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #0084ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0073e6; }
+
+        #messages { height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { display: flex; align-items: center; gap: 8px; animation: fadeIn 0.3s ease; }
+        .msg.my-msg { flex-direction: row-reverse; text-align: right; }
+        
+        .avatar { width: 35px; height: 35px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white; font-weight: bold; flex-shrink: 0; }
+        .bubble { background: #e4e6eb; padding: 8px 12px; border-radius: 18px; max-width: 70%; font-size: 14px; }
+        .my-msg .bubble { background: #0084ff; color: white; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="auth-container">
+        <h2 style="text-align: center;">Вход</h2>
+        <input type="text" id="username" placeholder="Логин">
+        <input type="password" id="password" placeholder="Пароль (любой)">
+        <button onclick="login()">Войти</button>
+    </div>
+
+    <div id="chat-container" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <b id="display-user">Чат</b>
+            <button onclick="logout()" style="width: auto; padding: 5px 10px; font-size: 12px; background: #ff4d4d;">Выйти</button>
+        </div>
+        <div id="messages"></div>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="msgInput" placeholder="Сообщение..." onkeypress="handleKey(event)">
+            <button onclick="sendMessage()" style="width: 60px;">➤</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Загрузка сообщений при старте
+        window.onload = () => {
+            const savedUser = localStorage.getItem('chat_user');
+            if (savedUser) {
+                currentUser = savedUser;
+                showChat();
+            }
+        };
+
+        function login() {
+            const user = document.getElementById('username').value.trim();
+            if (user.length < 2) return alert("Введите логин");
+            currentUser = user;
+            localStorage.setItem('chat_user', user);
+            showChat();
+        }
+
+        function logout() {
+            localStorage.removeItem('chat_user');
+            location.reload();
+        }
+
+        function showChat() {
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('chat-container').classList.remove('hidden');
+            document.getElementById('display-user').innerText = `Привет, ${currentUser}!`;
+            renderMessages();
+        }
+
+        function getAvatarColor(name) {
+            const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const msgs = JSON.parse(localStorage.getItem('chat_messages') || '[]');
+            msgs.push({ user: currentUser, text: text, time: new Date().toLocaleTimeString() });
+            localStorage.setItem('chat_messages', JSON.stringify(msgs));
+
+            input.value = '';
+            renderMessages();
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messages');
+            const msgs = JSON.parse(localStorage.getItem('chat_messages') || '[]');
+            container.innerHTML = msgs.map(m => `
+                <div class="msg ${m.user === currentUser ? 'my-msg' : ''}">
+                    <div class="avatar" style="background: ${getAvatarColor(m.user)}">
+                        ${m.user[0].toUpperCase()}
+                    </div>
+                    <div class="bubble">
+                        <small style="display:block; font-size: 10px; opacity: 0.7;">${m.user}</small>
+                        ${m.text}
+                    </div>
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function handleKey(e) { if (e.key === 'Enter') sendMessage(); }
+    </script>
+</body>
+</html>
+
